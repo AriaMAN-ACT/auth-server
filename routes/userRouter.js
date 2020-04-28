@@ -8,4 +8,15 @@ Router
     .route('/signup')
     .post(authController.signUp);
 
+Router
+    .route('/signin')
+    .post(authController.signIn);
+
+Router
+    .route('/checkToken')
+    .get(
+        authController.protect,
+        authController.checkToken
+    );
+
 module.exports = Router;

@@ -1,4 +1,5 @@
 const validator = require('validator');
+const { promisify } = require('util');
 const jsonWebToken = require('jsonwebtoken');
 
 const User = require('../models/User');
@@ -68,4 +69,33 @@ exports.signIn = Catch(async (req, res) => {
 
 
     sendToken(user, 200, res);
+});
+
+exports.protect = Catch(async (req, res, next) => {
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
+    }
+    if (!token) {
+        throw new AppError('You are not logged in.', 401);
+    }
+    const decodedToken = await promisify(jsonWebToken.verify)(token, process.env.JSON_WEB_TOKEN_SECRET);
+    const user = await User.findById(decodedToken.id);
+    if (!user) {
+        throw new AppError(
+            'The user belong to the token that no longer exists',
+            401
+        );
+    }
+    req.user = user;
+    next();
+});
+
+exports.checkToken = Catch(async (req, res, next) => {
+    res.status(200).json({
+        status: 'success',
+        data: {
+            user: req.user
+        }
+    });
 });
