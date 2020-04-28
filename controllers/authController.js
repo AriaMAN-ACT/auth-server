@@ -27,8 +27,6 @@ const sendToken = (user, statusCode, res) => {
     };
     if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
 
-    res.cookie('jwt', token, cookieOptions);
-
     user.password = undefined;
 
     res.status(statusCode).json({
@@ -51,3 +49,23 @@ exports.signUp = Catch(
         sendToken(user, 201, res);
     }
 );
+
+exports.signIn = Catch(async (req, res) => {
+    const { email, password } = req.body;
+    if (
+        !email ||
+        !password ||
+        !validator.isEmail(email) ||
+        password.length < 8 ||
+        password.length > 100) {
+        throw new AppError('request body should have valid email and password.', 400);
+    }
+    const user = await User.findOne({ email }).select('+password');
+
+    if (!user || !(await user.correctPassword(password, user.password))) {
+        throw new AppError('Incorrect email or password', 401);
+    }
+
+
+    sendToken(user, 200, res);
+});
